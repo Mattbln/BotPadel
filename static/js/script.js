@@ -25,27 +25,42 @@ function handleReservation(action, activeButton, inactiveButton) {
     // Animate button
     activeButton.classList.add('animate-pulse');
 
-    fetch(`/${action}`, { method: 'POST' })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            updateStatus(data.status);
-            checkStatus();  // Update buttons state
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            updateStatus(`Une erreur est survenue: ${error.message}`);
-        })
-        .finally(() => {
-            activeButton.disabled = false;
-            inactiveButton.disabled = false;
-            activeButton.classList.remove('opacity-50', 'cursor-not-allowed', 'animate-pulse');
-            inactiveButton.classList.remove('opacity-50', 'cursor-not-allowed');
-        });
+    let data = {};
+    if (action === 'start') {
+        data = {
+            date: document.getElementById('date').value,
+            court: document.getElementById('court').value,
+            time: document.getElementById('time').value
+        };
+    }
+
+    fetch(`/${action}`, { 
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        updateStatus(data.status);
+        checkStatus();  // Update buttons state
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        updateStatus(`Une erreur est survenue: ${error.message}`);
+    })
+    .finally(() => {
+        activeButton.disabled = false;
+        inactiveButton.disabled = false;
+        activeButton.classList.remove('opacity-50', 'cursor-not-allowed', 'animate-pulse');
+        inactiveButton.classList.remove('opacity-50', 'cursor-not-allowed');
+    });
 }
 
 function updateStatus(message) {
@@ -71,6 +86,15 @@ function checkStatus() {
         .then(data => {
             updateStatus(data.status);
             updateButtons(data.isRunning);
+            if (data.date) {
+                document.getElementById('date').value = data.date;
+            }
+            if (data.court) {
+                document.getElementById('court').value = data.court;
+            }
+            if (data.time) {
+                document.getElementById('time').value = data.time;
+            }
         })
         .catch(error => {
             console.error('Error:', error);
