@@ -7,8 +7,10 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 import os
 from datetime import datetime, timedelta
-import threading
 import time
+import threading
+import schedule
+import pytz
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', '').replace('postgres://', 'postgresql://') or 'sqlite:///reservations.db'
@@ -42,36 +44,42 @@ def reservation_padel():
 
     driver = setup_driver()
     try:
+        # Pré-chargement de la page
         driver.get('https://ballejaune.com/club/bandol')
+        WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.NAME, 'username')))
         
-        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.NAME, 'username')))
-        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.NAME, 'password')))
+        # Attendre jusqu'à 07:00:00 exactement
+        now = datetime.now(pytz.timezone('Europe/Paris'))
+        target_time = now.replace(hour=7, minute=0, second=0, microsecond=0)
+        time_to_wait = (target_time - now).total_seconds()
+        if time_to_wait > 0:
+            time.sleep(time_to_wait)
         
-        username_field = driver.find_element(By.NAME, 'username')
-        password_field = driver.find_element(By.NAME, 'password')
+        # Connexion rapide
+        driver.execute_script(
+            "document.getElementsByName('username')[0].value='Belin Dominique';"
+            "document.getElementsByName('password')[0].value='gb74mB';"
+            "document.getElementsByName('password')[0].form.submit();"
+        )
         
-        username_field.send_keys('Belin Dominique')
-        password_field.send_keys('gb74mB')
-        
-        password_field.submit()
-        
+        # Navigation rapide vers la page de réservation
         formatted_date = status.date.strftime("%d/%m/%Y")
         driver.get(f'https://ballejaune.com/reservation/#date="{formatted_date}&group=0&page=0')
         
-        slot = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, f'a.slot-free[data-schedule="{status.court}"][data-timestart="{status.time}"]'))
+        # Attente et clic rapides
+        slot = WebDriverWait(driver, 3).until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, f'a.slot-free[data-schedule="{status.court}"][data-timestart="{status.time}"]'))
         )
-        slot.click()
+        driver.execute_script("arguments[0].click();", slot)
         
-        button = WebDriverWait(driver, 10).until(
+        # Finalisation rapide
+        WebDriverWait(driver, 3).until(
             EC.element_to_be_clickable((By.CSS_SELECTOR, 'a[href="#with-none"]'))
-        )
-        button.click()
+        ).click()
         
-        button = WebDriverWait(driver, 10).until(
+        WebDriverWait(driver, 3).until(
             EC.element_to_be_clickable((By.CSS_SELECTOR, 'button[name="action_type"][value="create"]'))
-        )
-        button.click()
+        ).click()
         
         print("Réservation effectuée avec succès!")
         
@@ -84,10 +92,11 @@ def reservation_padel():
 
 def run_scheduler():
     while True:
-        now = datetime.now()
-        if now.hour == 7 and now.minute == 0:
+        now = datetime.now(pytz.timezone('Europe/Paris'))
+        if now.hour == 6 and now.minute == 59:  # Démarrer le processus à 06:59
             reservation_padel()
-        time.sleep(60)  # Check every minute
+            time.sleep(120)  # Attendre 2 minutes avant de vérifier à nouveau
+        time.sleep(30)  # Vérifier toutes les 30 secondes
 
 scheduler_thread = threading.Thread(target=run_scheduler)
 scheduler_thread.start()
