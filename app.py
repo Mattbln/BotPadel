@@ -18,6 +18,9 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
+TIMEZONE = pytz.timezone('Europe/Paris')
+SERVER_TIMEZONE = pytz.FixedOffset(120)  # GMT+2
+
 class ReservationStatus(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     is_active = db.Column(db.Boolean, default=False)
@@ -55,9 +58,9 @@ def reservation_padel():
             "document.getElementsByName('password')[0].form.submit();"
         )
         
-        # Attendre jusqu'à 16:25:00 exactement
-        now = datetime.now(pytz.timezone('Europe/Paris'))
-        target_time = now.replace(hour=16, minute=25, second=0, microsecond=0)
+        # Attendre jusqu'à 14:35:00 exactement (GMT+2)
+        now = datetime.now(SERVER_TIMEZONE)
+        target_time = now.replace(hour=14, minute=35, second=0, microsecond=0)
         time_to_wait = (target_time - now).total_seconds()
         if time_to_wait > 0:
             time.sleep(time_to_wait)
@@ -93,15 +96,27 @@ def reservation_padel():
 
 def run_scheduler():
     while True:
-        now = datetime.now(pytz.timezone('Europe/Paris'))
-        if now.hour == 16 and now.minute == 24:  # Démarrer le processus à 16:24
+        now = datetime.now(SERVER_TIMEZONE)
+        if now.hour == 14 and now.minute == 34:  # Démarrer le processus à 14:34 GMT+2
             reservation_padel()
             time.sleep(120)  # Attendre 2 minutes avant de vérifier à nouveau
         time.sleep(30)  # Vérifier toutes les 30 secondes
 
 
+
 scheduler_thread = threading.Thread(target=run_scheduler)
 scheduler_thread.start()
+
+@app.route('/server-time')
+def server_time():
+    server_now = datetime.now(SERVER_TIMEZONE)
+    paris_now = datetime.now(TIMEZONE)
+    return jsonify({
+        "server_time": server_now.strftime("%Y-%m-%d %H:%M:%S %Z%z"),
+        "paris_time": paris_now.strftime("%Y-%m-%d %H:%M:%S %Z%z"),
+        "is_dst": paris_now.dst() != timedelta(0)
+    })
+
 
 @app.route('/')
 def index():
