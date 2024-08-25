@@ -48,19 +48,20 @@ def reservation_padel():
         driver.get('https://ballejaune.com/club/bandol')
         WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.NAME, 'username')))
         
-        # Attendre jusqu'à 07:00:00 exactement
-        now = datetime.now(pytz.timezone('Europe/Paris'))
-        target_time = now.replace(hour=7, minute=0, second=0, microsecond=0)
-        time_to_wait = (target_time - now).total_seconds()
-        if time_to_wait > 0:
-            time.sleep(time_to_wait)
-        
         # Connexion rapide
         driver.execute_script(
             "document.getElementsByName('username')[0].value='Belin Dominique';"
             "document.getElementsByName('password')[0].value='gb74mB';"
             "document.getElementsByName('password')[0].form.submit();"
         )
+        
+        # Attendre jusqu'à 16:25:00 exactement
+        now = datetime.now(pytz.timezone('Europe/Paris'))
+        target_time = now.replace(hour=16, minute=25, second=0, microsecond=0)
+        time_to_wait = (target_time - now).total_seconds()
+        if time_to_wait > 0:
+            time.sleep(time_to_wait)
+        
         
         # Navigation rapide vers la page de réservation
         formatted_date = status.date.strftime("%d/%m/%Y")
@@ -93,10 +94,11 @@ def reservation_padel():
 def run_scheduler():
     while True:
         now = datetime.now(pytz.timezone('Europe/Paris'))
-        if now.hour == 6 and now.minute == 59:  # Démarrer le processus à 06:59
+        if now.hour == 16 and now.minute == 24:  # Démarrer le processus à 16:24
             reservation_padel()
             time.sleep(120)  # Attendre 2 minutes avant de vérifier à nouveau
         time.sleep(30)  # Vérifier toutes les 30 secondes
+
 
 scheduler_thread = threading.Thread(target=run_scheduler)
 scheduler_thread.start()
