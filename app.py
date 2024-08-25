@@ -5,7 +5,10 @@ from datetime import datetime
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', '').replace('postgres://', 'postgresql://') or 'sqlite:///reservations.db'
-db = SQLAlchemy(app)
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy()
+db.init_app(app)
 
 class ReservationStatus(db.Model):
     id = db.Column(db.Integer, primary_key=True)
